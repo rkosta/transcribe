@@ -55,10 +55,18 @@ def run_files(
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
     total = len(files)
+    claimed: dict[Path, Path] = {}
     for i, source in enumerate(files, 1):
         tag = f"[{i}/{total}] {source.name}"
         json_path, md_path = output_paths(source, output_dir)
         try:
+            key = json_path.resolve()
+            if key in claimed:
+                raise RuntimeError(
+                    f"output {json_path.name} collides with {claimed[key]} "
+                    "(same stem in this run); use --output-dir or rename"
+                )
+            claimed[key] = source
             if not force and json_path.exists() and md_path.exists():
                 say(f"{tag}: skipped (outputs exist; use --force)")
                 result.skipped.append(source)

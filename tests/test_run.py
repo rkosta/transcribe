@@ -180,6 +180,42 @@ def test_english_kept_without_warning(calls, audio):
     assert "dropped" not in res.output
 
 
+def test_param_detect_language_false_is_off(calls, audio):
+    res = run(audio, "--language", "en", "--topics", "--param", "detect_language=FALSE")
+    assert calls[0]["params"]["topics"] is True
+    assert "dropped" not in res.output
+
+
+def _two_dirs(tmp_path, names=("mon", "tue")):
+    for n in names:
+        (tmp_path / "d" / n).mkdir(parents=True)
+        (tmp_path / "d" / n / "audio.m4a").write_bytes(n.encode())
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_stem_collision_output_dir_is_error(calls, tmp_path, force):
+    _two_dirs(tmp_path)
+    out = tmp_path / "out"
+    args = [str(tmp_path / "d" / "**" / "audio.m4a"), "--output-dir", out]
+    res = run(*args, *(["--force"] if force else []))
+    assert res.exit_code == 1, res.output
+    assert "collides with" in res.output and "skipped (outputs" not in res.output
+    assert len(calls) == 1
+    first = json.loads((out / "audio.json").read_text())
+    assert first["deepgram_transcribe"]["source"]["path"] == calls[0]["path"].resolve().as_posix()
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_stem_collision_same_dir_different_ext(calls, tmp_path, force):
+    d = tmp_path / "d"
+    d.mkdir()
+    (d / "talk.m4a").write_bytes(b"a")
+    (d / "talk.mp4").write_bytes(b"b")
+    res = run(d / "talk.*", *(["--force"] if force else []))
+    assert res.exit_code == 1, res.output
+    assert "collides with" in res.output and len(calls) == 1
+
+
 def test_skip_then_force(calls, audio):
     assert run(audio).exit_code == 0
     res = run(audio)
@@ -349,7 +385,5 @@ def test_live_smoke(tmp_path, monkeypatch):
     assert res.exit_code == 0, res.output
     doc = json.loads((tmp_path / "tone.json").read_text())
     assert key not in json.dumps(doc)
-    assert (
-        "_No speech detected._" in (tmp_path / "tone.md").read_text()
-        or (tmp_path / "tone.md").exists()
-    )
+    assert (tmp_path / "tone.md").read_text().startswith("---")
+    assert "results" in doc["response"]

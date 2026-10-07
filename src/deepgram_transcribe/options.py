@@ -65,7 +65,7 @@ def build_params(
     params = {k: v for k in params if (v := _normalise(k, params[k])) is not None}
 
     language = str(params.get("language", ""))
-    english_ok = language.lower().startswith("en") and not params.get("detect_language")
+    english_ok = language.lower().startswith("en") and not _truthy(params.get("detect_language"))
     dropped: list[str] = []
     if not english_ok:
         for key in ENGLISH_ONLY:
@@ -73,6 +73,15 @@ def build_params(
                 dropped.append(key)
             params.pop(key, None)
     return params, dropped
+
+
+def _truthy(value: Any) -> bool:
+    """Passthrough values are strings: "false" (any case) means off."""
+    if isinstance(value, list | tuple):
+        value = value[-1] if value else None
+    if isinstance(value, str):
+        return value.strip().lower() not in ("", "false")
+    return bool(value)
 
 
 def expand_inputs(args: Sequence[str]) -> tuple[list[Path], list[str]]:

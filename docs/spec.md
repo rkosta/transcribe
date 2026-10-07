@@ -61,7 +61,7 @@ keyterm = ["Reaktor", "Hermes"]
 Unknown top-level keys → warning. Lists → repeated query params.
 
 ## Outputs
-For source `meeting.m4a`: `meeting.json` and `meeting.md` in the output dir. Skip check: if **both** exist and no `--force` → skip. Write JSON first (it's what the API cost), then Markdown.
+For source `meeting.m4a`: `meeting.json` and `meeting.md` in the output dir. Skip check: if **both** exist and no `--force` → skip. Write JSON first (it's what the API cost), then Markdown. If two sources in one run map to the same output stem (e.g. `a/x.m4a` and `b/x.m4a` with `--output-dir`, or `talk.m4a` and `talk.mp4`), the later one is a per-file error naming the conflicting source (exit 1); it is neither skipped nor overwritten.
 
 ### JSON file
 ```json
