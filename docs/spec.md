@@ -41,6 +41,8 @@ Option precedence per key: CLI flag > config `[deepgram]` > built-in default.
 
 Input files: any type; no extension filtering. The file is sent as-is; Deepgram decides. Deepgram/network errors are reported per file and the run continues. Use a generous HTTP timeout (meetings can be hours long; default 600 s, configurable via `timeout` in config/`--timeout`).
 
+Implementation: `client.py` is the only module that talks to Deepgram (`transcribe_file(api_key, path, params, timeout)`; params go out as query params via the SDK, SDK/network errors become `TranscriptionError` with the key scrubbed); `options.py` merges options (passthrough > CLI > config `[deepgram]` > defaults) and expands inputs; `runner.py` writes outputs. `--param` values are strings; a lone value is sent once, repeats are sent repeatedly. `date` in config is honoured when `--date` is absent; `output_dir` in config likewise. Unmatched args warn; if nothing matches at all → exit 2. A per-file failure is printed to stderr and the run continues (exit 1).
+
 Only channel 0 / alternative 0 is rendered (multichannel out of scope).
 
 ## Config file

@@ -15,8 +15,7 @@ def test_version():
     assert res.exit_code == 0 and "deepgram-transcribe" in res.output
 
 
-def test_stubs_exit_2():
-    assert runner.invoke(app, ["run", "a.m4a"]).exit_code == 2
+def test_render_stub_exits_2():
     assert runner.invoke(app, ["render", "a.json"]).exit_code == 2
 
 

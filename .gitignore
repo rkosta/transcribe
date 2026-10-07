@@ -10,4 +10,5 @@ __pycache__/
 .env
 .env.*
 .claude/
+.worktrees/
 src/deepgram_transcribe/_version.py
