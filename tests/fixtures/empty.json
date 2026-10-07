@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "request_id": "00000000-0000-0000-0000-000000000000",
+    "created": "2026-10-07T10:00:00.000Z",
+    "duration": 3.0,
+    "channels": 1,
+    "models": [
+      "abc123"
+    ],
+    "model_info": {
+      "abc123": {
+        "name": "nova-3",
+        "version": "2025-01-01.0",
+        "arch": "nova-3"
+      }
+    }
+  },
+  "results": {
+    "channels": [
+      {
+        "alternatives": [
+          {
+            "transcript": "",
+            "confidence": 0.99,
+            "words": [],
+            "paragraphs": {
+              "transcript": "",
+              "paragraphs": []
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

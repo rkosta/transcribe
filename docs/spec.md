@@ -108,7 +108,8 @@ Rules:
 - Blocks: use `paragraphs` when present; consecutive paragraphs by the same speaker merge under one heading (blank line between paragraphs). Without paragraphs, group consecutive `words` by speaker. Without diarization, no speaker labels, just timestamped paragraphs.
 - Empty transcript → Markdown with frontmatter and `_No speech detected._`.
 - Frontmatter values YAML-safe (quote strings that need it).
-- Renderer is a pure function: `(wrapped_json, date_value) -> str`. No I/O.
+- Renderer is a pure function: `render_markdown(doc, date, source_name=None) -> str` in `renderer.py`; `doc` is wrapped JSON or a bare response (`source_name` is the fallback for bare ones). `date` is already resolved by `resolve_date(value, mtime=None, now=None)` (`mtime`/`now`/`YYYY-MM-DD`, else `ValueError`). No I/O.
+- Speakers count = distinct speaker ids. Topics are de-duplicated, in order of first appearance.
 
 ## Exit codes
 `0` all files transcribed/rendered or skipped · `1` at least one file failed · `2` usage/config error (bad flags, no API key, no inputs matched).
