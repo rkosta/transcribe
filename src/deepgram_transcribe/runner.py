@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__, client
-from .renderer import render_markdown, resolve_date
+from .renderer import normalise, render_markdown, resolve_date
 
 Transcribe = Callable[[str, Path, dict[str, Any], float], dict[str, Any]]
 
@@ -95,6 +95,61 @@ def run_files(
             md = render_markdown(doc, resolve_date(date, mtime=mtime), source.name)
             md_path.write_text(md, encoding="utf-8")
             say(f"{tag}: wrote {json_path.name}, {md_path.name}")
+            detail(f"  -> {md_path}")
+            result.transcribed.append(source)
+        except Exception as exc:  # per-file: report and continue
+            msg = str(exc) or type(exc).__name__
+            err(f"error: {source}: {msg}")
+            result.failed.append((source, msg))
+    return result
+
+
+def render_files(
+    files: Sequence[Path],
+    *,
+    output_dir: Path | None,
+    force: bool,
+    date: str,
+    say: Callable[[str], None] = lambda _m: None,
+    detail: Callable[[str], None] = lambda _m: None,
+    err: Callable[[str], None] = lambda _m: None,
+) -> RunResult:
+    """Re-render Markdown from saved JSON (wrapped or bare). No network, no API key."""
+    result = RunResult()
+    if output_dir is not None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    total = len(files)
+    claimed: dict[Path, Path] = {}
+    for i, source in enumerate(files, 1):
+        tag = f"[{i}/{total}] {source.name}"
+        base = output_dir if output_dir is not None else source.parent
+        md_path = base / f"{source.stem}.md"
+        try:
+            key = md_path.resolve()
+            if key in claimed:
+                raise RuntimeError(
+                    f"output {md_path.name} collides with {claimed[key]} "
+                    "(same stem in this run); use --output-dir or rename"
+                )
+            claimed[key] = source
+            if not force and md_path.exists():
+                say(f"{tag}: skipped ({md_path.name} exists; use --force)")
+                result.skipped.append(source)
+                continue
+            try:
+                doc = json.loads(source.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                raise RuntimeError(f"cannot read JSON: {exc}") from exc
+            if not isinstance(doc, dict):
+                raise RuntimeError("not a Deepgram JSON object")
+            meta, response = normalise(doc, source.stem)
+            if not isinstance(response.get("results"), dict):
+                raise RuntimeError("no Deepgram response found (missing 'results')")
+            mtime = (meta.get("source") or {}).get("mtime") or _iso(source.stat().st_mtime)
+            md = render_markdown(doc, resolve_date(date, mtime=mtime), source.stem)
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            md_path.write_text(md, encoding="utf-8")
+            say(f"{tag}: wrote {md_path.name}")
             detail(f"  -> {md_path}")
             result.transcribed.append(source)
         except Exception as exc:  # per-file: report and continue

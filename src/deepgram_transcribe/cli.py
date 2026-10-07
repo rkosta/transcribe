@@ -13,7 +13,7 @@ from .client import DEFAULT_TIMEOUT
 from .config import ConfigError, load_config, resolve_api_key
 from .options import build_params, expand_inputs, parse_passthrough
 from .renderer import resolve_date
-from .runner import run_files
+from .runner import render_files, run_files
 
 app = typer.Typer(
     name="dgt",
@@ -42,11 +42,6 @@ def _root(
 
     `dgt FILES...` is a shortcut for `dgt run FILES...`.
     """
-
-
-def _not_implemented(name: str) -> None:
-    typer.echo(f"error: `{name}` is not implemented yet", err=True)
-    raise typer.Exit(2)
 
 
 def _usage_error(msg: str) -> typer.Exit:
@@ -174,11 +169,51 @@ def run(
 
 @app.command()
 def render(
-    json_files: Annotated[list[str], typer.Argument(help="Saved JSON files to re-render.")],
+    json_files: Annotated[
+        list[str], typer.Argument(help="Saved JSON files or globs to re-render.")
+    ],
     config: Annotated[Path | None, typer.Option("--config", help="Config file override.")] = None,
+    output_dir: Annotated[
+        Path | None, typer.Option("--output-dir", help="Where outputs go (created if missing).")
+    ] = None,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing outputs.")] = False,
+    date: Annotated[
+        str | None, typer.Option("--date", help="mtime | now | YYYY-MM-DD (default mtime).")
+    ] = None,
+    quiet: Annotated[bool, typer.Option("-q", "--quiet", help="Only errors.")] = False,
+    verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Show details.")] = False,
 ) -> None:
     """Re-render Markdown from saved JSON, no API call."""
-    _not_implemented("render")
+    try:
+        cfg = load_config(config)
+        date_value = date or cfg.date or "mtime"
+        if date_value != "mtime":
+            resolve_date(date_value)  # validate early -> usage error
+    except (ConfigError, ValueError) as exc:
+        raise _usage_error(str(exc)) from exc
+
+    sources, unmatched = expand_inputs(json_files)
+    if not sources:
+        raise _usage_error("no input files matched: " + ", ".join(unmatched))
+    for arg in unmatched:
+        typer.echo(f"warning: no match for {arg!r}", err=True)
+
+    out_dir = output_dir or (Path(cfg.output_dir).expanduser() if cfg.output_dir else None)
+    result = render_files(
+        sources,
+        output_dir=out_dir,
+        force=force,
+        date=date_value,
+        say=_noop if quiet else typer.echo,
+        detail=typer.echo if verbose and not quiet else _noop,
+        err=lambda m: typer.echo(m, err=True),
+    )
+    if not quiet:
+        typer.echo(
+            f"done: {len(result.transcribed)} rendered, {len(result.skipped)} skipped, "
+            f"{len(result.failed)} failed"
+        )
+    raise typer.Exit(result.exit_code)
 
 
 def route_args(args: list[str]) -> list[str]:

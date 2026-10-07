@@ -43,6 +43,9 @@ Input files: any type; no extension filtering. The file is sent as-is; Deepgram 
 
 Implementation: `client.py` is the only module that talks to Deepgram (`transcribe_file(api_key, path, params, timeout)`; params go out as query params via the SDK, SDK/network errors become `TranscriptionError` with the key scrubbed); `options.py` merges options (passthrough > CLI > config `[deepgram]` > defaults) and expands inputs; `runner.py` writes outputs. `--param` values are strings; a lone value is sent once, repeats are sent repeatedly. `date` in config is honoured when `--date` is absent; `output_dir` in config likewise. Unmatched args warn; if nothing matches at all → exit 2. A per-file failure is printed to stderr and the run continues (exit 1).
 
+### `render`
+`dgt render JSON_FILES...` takes files/globs (same expansion as `run`), needs no API key and makes no network call. Each input is a wrapped JSON file or a bare Deepgram response (needs `results`; the source name is then the JSON file stem). Output is `<stem>.md` next to the JSON or in `--output-dir` (also `output_dir`/`date` from config). If the `.md` exists and no `--force`, the file is skipped. `--date mtime` uses the mtime stored in the JSON, or the JSON file's own mtime for bare responses. Unreadable/invalid/non-Deepgram JSON and output-stem collisions are per-file errors (exit 1, run continues); bad `--date`/`--config` or no matching inputs → exit 2. Implemented as `runner.render_files`, reusing `options.expand_inputs`.
+
 Only channel 0 / alternative 0 is rendered (multichannel out of scope).
 
 ## Config file
