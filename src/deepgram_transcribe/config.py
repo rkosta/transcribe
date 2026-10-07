@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import sys
 import tomllib
@@ -26,6 +27,15 @@ class Config:
     timeout: float | None = None
     deepgram: dict[str, Any] = field(default_factory=dict)
     path: Path | None = None
+
+
+def validate_timeout(value: object, where: str) -> float:
+    """Timeout must be a positive, finite number (bools rejected)."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ConfigError(f"{where} must be a number")
+    if not math.isfinite(value) or value <= 0:
+        raise ConfigError(f"{where} must be a positive number")
+    return float(value)
 
 
 def _warn_stderr(msg: str) -> None:
@@ -68,8 +78,8 @@ def load_config(
     if not isinstance(deepgram, dict):
         raise ConfigError(f"[deepgram] in {path} must be a table")
     timeout = data.get("timeout")
-    if timeout is not None and (isinstance(timeout, bool) or not isinstance(timeout, int | float)):
-        raise ConfigError(f"timeout in {path} must be a number")
+    if "timeout" in data:
+        timeout = validate_timeout(timeout, f"timeout in {path}")
     for key in ("api_key", "output_dir", "date"):
         if key in data and not isinstance(data[key], str):
             raise ConfigError(f"{key} in {path} must be a string")

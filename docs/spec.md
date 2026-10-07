@@ -19,11 +19,12 @@ Globs are expanded by the tool too (quoted globs work, `**` supported). Duplicat
 ### Shared options (run + render)
 | Option | Meaning |
 |---|---|
-| `--output-dir DIR` | Where outputs go. Default: next to the source file. Created if missing. |
+| `--output-dir DIR` | Where outputs go. Default: next to the source file. Created if missing; an existing non-directory path → exit 2. |
 | `--force` | Overwrite existing outputs. Without it, a file whose outputs already exist is skipped (reported). |
 | `--date mtime\|now\|YYYY-MM-DD` | Value of frontmatter `date`. Default `mtime` (source file modification date; for `render`, the mtime stored in the JSON). Invalid value → usage error. |
 | `--config PATH` | Config file override. |
 | `-q/--quiet`, `-v/--verbose` | Output verbosity. |
+| `-h/--help` | Show help (`-h` is an alias, also on subcommands). |
 
 ### `run` options
 API key precedence: `--api-key` > `DEEPGRAM_API_KEY` > `api_key` in config. Missing key → clear error, exit 2.
@@ -39,17 +40,17 @@ Option precedence per key: CLI flag > config `[deepgram]` > built-in default.
 
 **English-only rule:** `summarize`, `topics`, `intents`, `sentiment` are only sent when the effective `language` starts with `en` and `detect_language` is off. Otherwise they are dropped from the request with one warning per run naming the dropped features. (Default `multi` therefore skips them — accepted.)
 
-Input files: any type; no extension filtering. The file is sent as-is; Deepgram decides. Deepgram/network errors are reported per file and the run continues. Use a generous HTTP timeout (meetings can be hours long; default 600 s, configurable via `timeout` in config/`--timeout`).
+Input files: any type; no extension filtering. The file is sent as-is; Deepgram decides. The Deepgram client retries failed requests twice (`max_retries=2`). Deepgram/network errors are reported per file and the run continues. Use a generous HTTP timeout (meetings can be hours long; default 600 s, configurable via `timeout` in config/`--timeout`).
 
 Implementation: `client.py` is the only module that talks to Deepgram (`transcribe_file(api_key, path, params, timeout)`; params go out as query params via the SDK, SDK/network errors become `TranscriptionError` with the key scrubbed); `options.py` merges options (passthrough > CLI > config `[deepgram]` > defaults) and expands inputs; `runner.py` writes outputs. `--param` values are strings; a lone value is sent once, repeats are sent repeatedly. `date` in config is honoured when `--date` is absent; `output_dir` in config likewise. Unmatched args warn; if nothing matches at all → exit 2. A per-file failure is printed to stderr and the run continues (exit 1).
 
 ### `render`
-`dgt render JSON_FILES...` takes files/globs (same expansion as `run`), needs no API key and makes no network call. Each input is a wrapped JSON file or a bare Deepgram response (needs `results`; the source name is then the JSON file stem). Output is `<stem>.md` next to the JSON or in `--output-dir` (also `output_dir`/`date` from config). If the `.md` exists and no `--force`, the file is skipped. `--date mtime` uses the mtime stored in the JSON, or the JSON file's own mtime for bare responses. Unreadable/invalid/non-Deepgram JSON and output-stem collisions are per-file errors (exit 1, run continues); bad `--date`/`--config` or no matching inputs → exit 2. Implemented as `runner.render_files`, reusing `options.expand_inputs`.
+`dgt render JSON_FILES...` takes files/globs (same expansion as `run`), needs no API key and makes no network call. Each input is a wrapped JSON file or a bare Deepgram response (needs `results`; the source name is then the JSON file stem). Output is `<stem>.md` next to the JSON or in `--output-dir` (also `output_dir`/`date` from config). If the `.md` exists and no `--force`, the file is skipped. `--date mtime` uses the mtime stored in the JSON, or the JSON file's own mtime for bare responses. Unreadable/invalid/non-Deepgram JSON (including wrong-typed `deepgram_transcribe`/`source`/`response` fields) and output-stem collisions are per-file errors (exit 1, run continues); bad `--date`/`--config` or no matching inputs → exit 2. Implemented as `runner.render_files`, reusing `options.expand_inputs`.
 
 Only channel 0 / alternative 0 is rendered (multichannel out of scope).
 
 ## Config file
-Path: `--config` > `$XDG_CONFIG_HOME/deepgram-transcribe/config.toml` > `~/.config/deepgram-transcribe/config.toml` (same on macOS). Missing file is fine.
+Path: `--config` > `$XDG_CONFIG_HOME/deepgram-transcribe/config.toml` > `~/.config/deepgram-transcribe/config.toml` (same on macOS). A missing default file is fine; an explicit `--config` path that does not exist is an error (exit 2). `timeout` must be a positive number (invalid `--timeout` or config value → exit 2).
 ```toml
 api_key = "..."          # optional
 output_dir = "~/Transcripts"   # optional

@@ -10,16 +10,19 @@ import typer
 
 from . import __version__
 from .client import DEFAULT_TIMEOUT
-from .config import ConfigError, load_config, resolve_api_key
+from .config import ConfigError, load_config, resolve_api_key, validate_timeout
 from .options import build_params, expand_inputs, parse_passthrough
 from .renderer import resolve_date
 from .runner import render_files, run_files
+
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 app = typer.Typer(
     name="dgt",
     help="Transcribe recordings with Deepgram into Markdown + raw JSON.",
     no_args_is_help=True,
     add_completion=False,
+    context_settings=CONTEXT_SETTINGS,
 )
 
 COMMANDS = ("run", "render")
@@ -49,11 +52,16 @@ def _usage_error(msg: str) -> typer.Exit:
     return typer.Exit(2)
 
 
+def _check_output_dir(out_dir: Path | None) -> None:
+    if out_dir is not None and out_dir.exists() and not out_dir.is_dir():
+        raise _usage_error(f"--output-dir {out_dir} exists and is not a directory")
+
+
 def _noop(_msg: str) -> None:
     return None
 
 
-@app.command()
+@app.command(context_settings=CONTEXT_SETTINGS)
 def run(
     files: Annotated[list[str], typer.Argument(help="Files or globs to transcribe.")],
     config: Annotated[Path | None, typer.Option("--config", help="Config file override.")] = None,
@@ -130,9 +138,13 @@ def run(
         date_value = date or cfg.date or "mtime"
         if date_value != "mtime":
             resolve_date(date_value)  # validate early -> usage error
+        if timeout is not None:
+            validate_timeout(timeout, "--timeout")
     except (ConfigError, ValueError) as exc:
         raise _usage_error(str(exc)) from exc
-    http_timeout = timeout if timeout is not None else cfg.timeout or DEFAULT_TIMEOUT
+    http_timeout = timeout if timeout is not None else cfg.timeout
+    if http_timeout is None:
+        http_timeout = DEFAULT_TIMEOUT
 
     sources, unmatched = expand_inputs(files)
     if not sources:
@@ -147,6 +159,7 @@ def run(
         )
 
     out_dir = output_dir or (Path(cfg.output_dir).expanduser() if cfg.output_dir else None)
+    _check_output_dir(out_dir)
     result = run_files(
         sources,
         api_key=key,
@@ -167,7 +180,7 @@ def run(
     raise typer.Exit(result.exit_code)
 
 
-@app.command()
+@app.command(context_settings=CONTEXT_SETTINGS)
 def render(
     json_files: Annotated[
         list[str], typer.Argument(help="Saved JSON files or globs to re-render.")
@@ -199,6 +212,7 @@ def render(
         typer.echo(f"warning: no match for {arg!r}", err=True)
 
     out_dir = output_dir or (Path(cfg.output_dir).expanduser() if cfg.output_dir else None)
+    _check_output_dir(out_dir)
     result = render_files(
         sources,
         output_dir=out_dir,

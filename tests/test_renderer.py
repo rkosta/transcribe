@@ -138,3 +138,11 @@ def test_date_explicit():
 def test_date_invalid(bad):
     with pytest.raises(ValueError):
         resolve_date(bad)
+
+
+def test_yaml_c1_controls_roundtrip():
+    import yaml
+
+    value = "a\x80b\x85c\x9fd\x7fe"
+    out = render_markdown(load("empty"), "2026-10-05", value)
+    assert yaml.safe_load(out.split("---\n")[1])["source"] == value

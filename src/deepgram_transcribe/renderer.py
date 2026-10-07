@@ -51,7 +51,7 @@ def _yaml_str(value: str) -> str:
     for ch in value:
         if ch in escapes:
             out.append(escapes[ch])
-        elif ord(ch) < 0x20 or ord(ch) == 0x7F:
+        elif ord(ch) < 0x20 or 0x7F <= ord(ch) <= 0x9F:
             out.append(f"\\x{ord(ch):02x}")
         else:
             out.append(ch)

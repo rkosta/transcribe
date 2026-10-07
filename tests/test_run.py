@@ -387,3 +387,29 @@ def test_live_smoke(tmp_path, monkeypatch):
     assert key not in json.dumps(doc)
     assert (tmp_path / "tone.md").read_text().startswith("---")
     assert "results" in doc["response"]
+
+
+@pytest.mark.parametrize("bad", ["0", "-3", "abc"])
+def test_bad_cli_timeout_exit_2(calls, audio, bad):
+    res = run("--timeout", bad, audio)
+    assert res.exit_code == 2 and not calls
+
+
+def test_config_timeout_zero_is_error(calls, audio, tmp_path):
+    cfg = tmp_path / "c.toml"
+    cfg.write_text("timeout = 0\n")
+    res = run("--config", cfg, audio)
+    assert res.exit_code == 2 and not calls and "timeout" in res.output
+
+
+def test_timeout_passed_through(calls, audio):
+    assert run("--timeout", "42", audio).exit_code == 0
+    assert calls[0]["timeout"] == 42.0
+
+
+def test_output_dir_is_file(calls, audio, tmp_path):
+    f = tmp_path / "afile"
+    f.write_text("x")
+    res = run("--output-dir", f, audio)
+    assert res.exit_code == 2 and "not a directory" in res.output
+    assert "Traceback" not in res.output and not calls

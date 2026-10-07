@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
 ]
 dependencies = [
@@ -52,12 +53,17 @@ packages = ["src/deepgram_transcribe"]
 [tool.pytest.ini_options]
 addopts = "-m 'not live'"
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore:.*InvalidStatusCode.*:DeprecationWarning",
+    "ignore:websockets.legacy is deprecated.*:DeprecationWarning",
+]
 markers = ["live: hits the real Deepgram API (needs DEEPGRAM_API_KEY, costs money)"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+extend-exclude = ["src/deepgram_transcribe/_version.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

@@ -76,11 +76,11 @@ def build_params(
 
 
 def _truthy(value: Any) -> bool:
-    """Passthrough values are strings: "false" (any case) means off."""
+    """Passthrough values are strings: "false"/"0"/"no"/"off" (any case) mean off."""
     if isinstance(value, list | tuple):
         value = value[-1] if value else None
     if isinstance(value, str):
-        return value.strip().lower() not in ("", "false")
+        return value.strip().lower() not in ("", "false", "0", "no", "off")
     return bool(value)
 
 

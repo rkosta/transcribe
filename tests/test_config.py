@@ -83,3 +83,36 @@ def test_api_key_missing_message(tmp_path):
 
 def test_api_key_blank_is_ignored(tmp_path):
     assert resolve_api_key("  ", _cfg(tmp_path, "cfg"), {"DEEPGRAM_API_KEY": ""}) == "cfg"
+
+
+def _write(tmp_path, text):
+    f = tmp_path / "c.toml"
+    f.write_text(text)
+    return f
+
+
+def test_deepgram_not_a_table(tmp_path):
+    with pytest.raises(ConfigError, match="table"):
+        load_config(_write(tmp_path, 'deepgram = "x"\n'), {})
+
+
+@pytest.mark.parametrize("val", ['"fast"', "true", "0", "-5", "nan"])
+def test_bad_timeout(tmp_path, val):
+    with pytest.raises(ConfigError, match="timeout"):
+        load_config(_write(tmp_path, f"timeout = {val}\n"), {})
+
+
+@pytest.mark.parametrize("key", ["api_key", "output_dir", "date"])
+def test_non_string_values(tmp_path, key):
+    with pytest.raises(ConfigError, match=key):
+        load_config(_write(tmp_path, f"{key} = 5\n"), {})
+
+
+def test_no_warnings_for_known_keys(tmp_path):
+    f = _write(
+        tmp_path,
+        'api_key = "k"\noutput_dir = "o"\ndate = "now"\ntimeout = 1.5\n[deepgram]\nmodel = "x"\n',
+    )
+    warnings: list[str] = []
+    cfg = load_config(f, {}, warn=warnings.append)
+    assert warnings == [] and cfg.timeout == 1.5

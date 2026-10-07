@@ -104,6 +104,27 @@ def run_files(
     return result
 
 
+def _check_wrapped(doc: dict[str, Any], name: str) -> None:
+    """Reject wrong-typed wrapper fields with a clear message."""
+    if "response" in doc and not isinstance(doc["response"], dict):
+        raise RuntimeError(f"invalid response in {name}: expected an object")
+    meta = doc.get("deepgram_transcribe")
+    if meta is None:
+        return
+    bad = not isinstance(meta, dict)
+    if not bad:
+        for key in ("source", "options"):
+            if meta.get(key) is not None and not isinstance(meta[key], dict):
+                bad = True
+        src = meta.get("source")
+        if isinstance(src, dict):
+            for key in ("name", "mtime"):
+                if src.get(key) is not None and not isinstance(src[key], str):
+                    bad = True
+    if bad:
+        raise RuntimeError(f"invalid deepgram_transcribe metadata in {name}")
+
+
 def render_files(
     files: Sequence[Path],
     *,
@@ -142,6 +163,7 @@ def render_files(
                 raise RuntimeError(f"cannot read JSON: {exc}") from exc
             if not isinstance(doc, dict):
                 raise RuntimeError("not a Deepgram JSON object")
+            _check_wrapped(doc, source.name)
             meta, response = normalise(doc, source.stem)
             if not isinstance(response.get("results"), dict):
                 raise RuntimeError("no Deepgram response found (missing 'results')")

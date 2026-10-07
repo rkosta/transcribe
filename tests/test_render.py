@@ -135,3 +135,34 @@ def test_bad_config_exit_2(wrapped, tmp_path):
     cfg = tmp_path / "bad.toml"
     cfg.write_text("this is = not [valid")
     assert render("--config", cfg, wrapped).exit_code == 2
+
+
+def test_output_dir_is_file(wrapped, tmp_path):
+    f = tmp_path / "afile"
+    f.write_text("x")
+    res = render("--output-dir", f, wrapped)
+    assert res.exit_code == 2 and "not a directory" in res.output
+    assert "Traceback" not in res.output
+
+
+@pytest.mark.parametrize(
+    "mutate, expect",
+    [
+        (lambda d: d.update(deepgram_transcribe="oops"), "invalid deepgram_transcribe metadata"),
+        (lambda d: d["deepgram_transcribe"].update(source="oops"), "invalid deepgram_transcribe"),
+        (lambda d: d["deepgram_transcribe"].update(options=[1]), "invalid deepgram_transcribe"),
+        (lambda d: d.update(response="oops"), "invalid response"),
+    ],
+)
+def test_malformed_wrapped_types(wrapped, tmp_path, mutate, expect):
+    doc = json.loads(wrapped.read_text())
+    mutate(doc)
+    bad = wrapped.parent / "bad.json"
+    bad.write_text(json.dumps(doc))
+    good = wrapped.parent / "good.json"
+    shutil.copy(FIXTURES / "wrapped.json", good)
+    res = render(bad, good)
+    assert res.exit_code == 1
+    assert expect in res.output and "bad.json" in res.output
+    assert "has no attribute" not in res.output
+    assert (wrapped.parent / "good.md").exists()
