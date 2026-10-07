@@ -413,3 +413,11 @@ def test_output_dir_is_file(calls, audio, tmp_path):
     res = run("--output-dir", f, audio)
     assert res.exit_code == 2 and "not a directory" in res.output
     assert "Traceback" not in res.output and not calls
+
+
+def test_output_dir_under_file(calls, audio, tmp_path):
+    f = tmp_path / "afile"
+    f.write_text("x")
+    res = run("--output-dir", f / "sub", audio)
+    assert res.exit_code == 2 and "cannot be created" in res.output
+    assert "Traceback" not in res.output and not calls

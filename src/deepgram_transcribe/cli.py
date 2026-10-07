@@ -53,8 +53,16 @@ def _usage_error(msg: str) -> typer.Exit:
 
 
 def _check_output_dir(out_dir: Path | None) -> None:
-    if out_dir is not None and out_dir.exists() and not out_dir.is_dir():
+    if out_dir is None:
+        return
+    if out_dir.exists() and not out_dir.is_dir():
         raise _usage_error(f"--output-dir {out_dir} exists and is not a directory")
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise _usage_error(
+            f"--output-dir {out_dir} cannot be created: {exc.strerror or exc}"
+        ) from exc
 
 
 def _noop(_msg: str) -> None:

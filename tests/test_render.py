@@ -166,3 +166,11 @@ def test_malformed_wrapped_types(wrapped, tmp_path, mutate, expect):
     assert expect in res.output and "bad.json" in res.output
     assert "has no attribute" not in res.output
     assert (wrapped.parent / "good.md").exists()
+
+
+def test_output_dir_under_file(wrapped, tmp_path):
+    f = tmp_path / "afile"
+    f.write_text("x")
+    res = render("--output-dir", f / "sub", wrapped)
+    assert res.exit_code == 2 and "cannot be created" in res.output
+    assert "Traceback" not in res.output

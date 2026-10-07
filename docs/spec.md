@@ -19,7 +19,7 @@ Globs are expanded by the tool too (quoted globs work, `**` supported). Duplicat
 ### Shared options (run + render)
 | Option | Meaning |
 |---|---|
-| `--output-dir DIR` | Where outputs go. Default: next to the source file. Created if missing; an existing non-directory path → exit 2. |
+| `--output-dir DIR` | Where outputs go. Default: next to the source file. Created if missing; an existing non-directory path, or a path that cannot be created → exit 2. |
 | `--force` | Overwrite existing outputs. Without it, a file whose outputs already exist is skipped (reported). |
 | `--date mtime\|now\|YYYY-MM-DD` | Value of frontmatter `date`. Default `mtime` (source file modification date; for `render`, the mtime stored in the JSON). Invalid value → usage error. |
 | `--config PATH` | Config file override. |
