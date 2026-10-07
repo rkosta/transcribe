@@ -46,7 +46,16 @@ def _yaml_str(value: str) -> str:
     """Quote a string for YAML unless it is a safe plain scalar."""
     if _PLAIN_RE.fullmatch(value) and value.lower() not in _RESERVED:
         return value
-    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    escapes = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r", "\t": "\\t"}
+    out = []
+    for ch in value:
+        if ch in escapes:
+            out.append(escapes[ch])
+        elif ord(ch) < 0x20 or ord(ch) == 0x7F:
+            out.append(f"\\x{ord(ch):02x}")
+        else:
+            out.append(ch)
+    return '"' + "".join(out) + '"'
 
 
 def normalise(doc: dict, source_name: str | None = None) -> tuple[dict, dict]:

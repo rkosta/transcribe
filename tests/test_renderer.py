@@ -75,6 +75,26 @@ def test_wrapped_uses_embedded_source_and_quotes_yaml():
     assert out.endswith(DIARIZED_BODY)
 
 
+@pytest.mark.parametrize("name", sorted(p.stem for p in FIX.glob("*.json")))
+def test_fixtures_match_sdk_schema(name):
+    from deepgram.types.listen_v1response import ListenV1Response
+
+    doc = load(name)
+    ListenV1Response.model_validate(doc.get("response", doc))
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["new\nline", "cr\rlf", "tab\there", "bell\x07", "back\\slash", 'q"uote', "a: b"],
+)
+def test_yaml_source_roundtrip(value):
+    import yaml
+
+    out = render_markdown(load("empty"), "2026-10-05", value)
+    front = out.split("---\n")[1]
+    assert yaml.safe_load(front)["source"] == value
+
+
 def test_bare_response_without_source_omits_source():
     out = render_markdown(load("empty"), "2026-10-05")
     assert "source:" not in out
