@@ -21,6 +21,8 @@ class ConfigError(Exception):
 
 @dataclass
 class Config:
+    """Settings read from the TOML config file; unset fields are None or empty."""
+
     api_key: str | None = None
     output_dir: str | None = None
     date: str | None = None
@@ -30,7 +32,15 @@ class Config:
 
 
 def validate_timeout(value: object, where: str) -> float:
-    """Timeout must be a positive, finite number (bools rejected)."""
+    """Return ``value`` as a float, requiring a positive, finite number (bools rejected).
+
+    Args:
+        value: Raw value from the config file or CLI.
+        where: Label used in the error message, e.g. ``--timeout``.
+
+    Raises:
+        ConfigError: If the value is not a positive finite number.
+    """
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ConfigError(f"{where} must be a number")
     if not math.isfinite(value) or value <= 0:
@@ -45,7 +55,11 @@ def _warn_stderr(msg: str) -> None:
 def resolve_config_path(
     explicit: Path | str | None = None, env: Mapping[str, str] | None = None
 ) -> Path:
-    """--config > $XDG_CONFIG_HOME/deepgram-transcribe/config.toml > ~/.config/..."""
+    """Return the config file path (it may not exist).
+
+    Precedence: ``explicit`` (``--config``), then
+    ``$XDG_CONFIG_HOME/deepgram-transcribe/config.toml``, then ``~/.config/...``.
+    """
     if explicit:
         return Path(explicit).expanduser()
     env = os.environ if env is None else env
@@ -59,7 +73,19 @@ def load_config(
     env: Mapping[str, str] | None = None,
     warn: Callable[[str], None] = _warn_stderr,
 ) -> Config:
-    """Load the config. A missing default file is fine; a missing explicit one is an error."""
+    """Load the config file.
+
+    Args:
+        explicit: Path from ``--config``. Must exist if given.
+        env: Environment mapping; defaults to ``os.environ``.
+        warn: Called once per unknown top-level key.
+
+    Returns:
+        The parsed config, or an empty one if the default file doesn't exist.
+
+    Raises:
+        ConfigError: On a missing explicit file, invalid TOML, or wrongly typed values.
+    """
     path = resolve_config_path(explicit, env)
     if not path.is_file():
         if explicit:
@@ -98,7 +124,13 @@ def resolve_api_key(
     config: Config,
     env: Mapping[str, str] | None = None,
 ) -> str:
-    """--api-key > DEEPGRAM_API_KEY > config. Never include the key in messages."""
+    """Return the API key: ``--api-key`` > ``DEEPGRAM_API_KEY`` > config file, stripped.
+
+    Blank values are skipped. Error messages never include the key.
+
+    Raises:
+        ConfigError: If no source provides a key.
+    """
     env = os.environ if env is None else env
     for candidate in (cli_key, env.get(API_KEY_ENV), config.api_key):
         if candidate and candidate.strip():

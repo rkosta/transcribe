@@ -19,7 +19,11 @@ _GLOB_CHARS = set("*?[")
 
 
 def parse_passthrough(items: Sequence[str]) -> dict[str, list[str]]:
-    """`KEY=VALUE` items -> {key: [values]} (repeats accumulate). Raises ValueError."""
+    """Parse ``KEY=VALUE`` items into ``{key: [values]}``; repeated keys accumulate.
+
+    Raises:
+        ValueError: If an item has no ``=`` or an empty key.
+    """
     out: dict[str, list[str]] = {}
     for item in items:
         key, sep, value = item.partition("=")
@@ -31,6 +35,7 @@ def parse_passthrough(items: Sequence[str]) -> dict[str, list[str]]:
 
 
 def _normalise(key: str, value: Any) -> Any:
+    """Map a value to its wire form; None means "omit the parameter"."""
     if key == "summarize":
         if value is True:
             return "v2"
@@ -48,10 +53,19 @@ def build_params(
     config_deepgram: Mapping[str, Any],
     passthrough: Mapping[str, list[str]],
 ) -> tuple[dict[str, Any], list[str]]:
-    """Merge options: passthrough > CLI > config [deepgram] > defaults.
+    """Merge options into Deepgram query parameters.
 
-    ``cli`` values of None (or an empty list/tuple) mean "not given". Returns
-    (params, dropped_english_only_features).
+    Precedence, highest first: passthrough (``--param``), CLI flags, config ``[deepgram]``,
+    ``DEFAULTS``.
+
+    Args:
+        cli: CLI flag values. None or an empty list/tuple means "not given".
+        config_deepgram: The config file's ``[deepgram]`` table.
+        passthrough: Parsed ``--param`` values; a single value is unwrapped from its list.
+
+    Returns:
+        ``(params, dropped)``: the parameters to send, and the English-only features
+        removed because the language isn't English.
     """
     params: dict[str, Any] = dict(DEFAULTS)
     for source in (config_deepgram, cli):
@@ -64,6 +78,8 @@ def build_params(
 
     params = {k: v for k in params if (v := _normalise(k, params[k])) is not None}
 
+    # These features are English-only; drop them (and report) rather than fail the request.
+    # detect_language may resolve to non-English, so it counts as non-English too.
     language = str(params.get("language", ""))
     english_ok = language.lower().startswith("en") and not _truthy(params.get("detect_language"))
     dropped: list[str] = []
@@ -85,7 +101,11 @@ def _truthy(value: Any) -> bool:
 
 
 def expand_inputs(args: Sequence[str]) -> tuple[list[Path], list[str]]:
-    """Expand files/globs (``**`` supported), deduped in order. Returns (files, unmatched args)."""
+    """Expand files and globs (``**`` supported) into existing files, deduped in order.
+
+    Returns:
+        ``(files, unmatched)``, where ``unmatched`` holds the args that matched nothing.
+    """
     files: list[Path] = []
     seen: set[Path] = set()
     unmatched: list[str] = []

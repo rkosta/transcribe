@@ -29,6 +29,7 @@ COMMANDS = ("run", "render")
 
 
 def _version_callback(value: bool) -> None:
+    """Print the version and exit when ``--version`` is given."""
     if value:
         typer.echo(f"deepgram-transcribe {__version__}")
         raise typer.Exit()
@@ -48,11 +49,13 @@ def _root(
 
 
 def _usage_error(msg: str) -> typer.Exit:
+    """Print ``msg`` to stderr and return an exit-2 exception for the caller to raise."""
     typer.echo(f"error: {msg}", err=True)
     return typer.Exit(2)
 
 
 def _check_output_dir(out_dir: Path | None) -> None:
+    """Create ``out_dir`` up front, turning an unusable path into a usage error."""
     if out_dir is None:
         return
     if out_dir.exists() and not out_dir.is_dir():
@@ -240,6 +243,7 @@ def render(
 
 def route_args(args: list[str]) -> list[str]:
     """Insert `run` for the bare `dgt FILES...` form."""
+    # Typer has no default subcommand, so argv is rewritten before Typer parses it.
     if not args:
         return args
     if args[0] in COMMANDS or args[0] in ("--help", "-h", "--version"):
@@ -248,4 +252,5 @@ def route_args(args: list[str]) -> list[str]:
 
 
 def main() -> None:
+    """Console-script entry point."""
     app(args=route_args(sys.argv[1:]), prog_name="dgt")

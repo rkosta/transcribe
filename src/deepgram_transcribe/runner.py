@@ -17,12 +17,15 @@ Transcribe = Callable[[str, Path, dict[str, Any], float], dict[str, Any]]
 
 @dataclass
 class RunResult:
+    """Per-file outcome of ``run_files`` and ``render_files``."""
+
     transcribed: list[Path] = field(default_factory=list)
     skipped: list[Path] = field(default_factory=list)
     failed: list[tuple[Path, str]] = field(default_factory=list)
 
     @property
     def exit_code(self) -> int:
+        """1 if any file failed, else 0. Skipped files are not failures."""
         return 1 if self.failed else 0
 
 
@@ -31,6 +34,7 @@ def _iso(ts: float) -> str:
 
 
 def output_paths(source: Path, output_dir: Path | None) -> tuple[Path, Path]:
+    """Return the ``(json, md)`` output paths: beside ``source`` unless ``output_dir`` is set."""
     base = output_dir if output_dir is not None else source.parent
     return base / f"{source.stem}.json", base / f"{source.stem}.md"
 
@@ -49,7 +53,25 @@ def run_files(
     err: Callable[[str], None] = lambda _m: None,
     transcribe: Transcribe | None = None,
 ) -> RunResult:
-    """Process each file; per-file failures are recorded and the run continues."""
+    """Transcribe each file and write ``<stem>.json`` and ``<stem>.md``.
+
+    Args:
+        files: Input files, processed in order.
+        api_key: Deepgram API key.
+        params: Deepgram query parameters; also saved in the JSON under ``options``.
+        timeout: HTTP timeout in seconds.
+        output_dir: Where outputs go; defaults to each source's directory.
+        force: Overwrite existing outputs instead of skipping the file.
+        date: ``--date`` value, resolved per file.
+        say: Progress sink.
+        detail: Verbose-only sink.
+        err: Error sink.
+        transcribe: Replacement for the Deepgram call, for tests.
+
+    Returns:
+        Per-file outcome. A failing file is recorded and the run continues; the caller
+        should exit with ``RunResult.exit_code``.
+    """
     transcribe = transcribe or client.transcribe_file
     result = RunResult()
     if output_dir is not None:
@@ -60,6 +82,7 @@ def run_files(
         tag = f"[{i}/{total}] {source.name}"
         json_path, md_path = output_paths(source, output_dir)
         try:
+            # Same stem twice in one run would overwrite the first file's outputs.
             key = json_path.resolve()
             if key in claimed:
                 raise RuntimeError(
@@ -135,7 +158,14 @@ def render_files(
     detail: Callable[[str], None] = lambda _m: None,
     err: Callable[[str], None] = lambda _m: None,
 ) -> RunResult:
-    """Re-render Markdown from saved JSON (wrapped or bare). No network, no API key."""
+    """Re-render ``<stem>.md`` from saved JSON (wrapped or bare). No network, no API key.
+
+    Arguments mirror ``run_files`` without the API options; ``files`` are the saved JSON files.
+
+    Returns:
+        Per-file outcome. Unreadable or non-Deepgram JSON is recorded as a failure and the
+        run continues; exit with ``RunResult.exit_code``.
+    """
     result = RunResult()
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -146,6 +176,7 @@ def render_files(
         base = output_dir if output_dir is not None else source.parent
         md_path = base / f"{source.stem}.md"
         try:
+            # Same stem twice in one run would overwrite the first file's outputs.
             key = md_path.resolve()
             if key in claimed:
                 raise RuntimeError(

@@ -19,17 +19,31 @@ def transcribe_file(
 ) -> dict[str, Any]:
     """Send one file to Deepgram's pre-recorded endpoint and return the response as a dict.
 
-    ``params`` are sent verbatim as query parameters (bools as true/false, lists repeated).
+    Args:
+        api_key: Deepgram API key. Redacted from any error message.
+        path: Audio/video file to upload.
+        params: Query parameters, sent verbatim (bools as true/false, lists repeated).
+        timeout: HTTP timeout in seconds.
+
+    Returns:
+        The response as a JSON-compatible dict, keyed by Deepgram's API field names.
+
+    Raises:
+        TranscriptionError: On unreadable files, SDK/network/HTTP failures, or a response
+            without ``results``.
     """
     from deepgram import DeepgramClient  # imported lazily: keeps `--help` fast
 
     try:
         audio = path.read_bytes()
+        # Timeout is passed twice (client and request) so neither SDK default can win.
         client = DeepgramClient(api_key=api_key, timeout=timeout)
         response = client.listen.v1.media.transcribe_file(
             request=audio,
             request_options={
                 "timeout": timeout,
+                # The SDK has no typed argument for arbitrary options; this sends them as
+                # raw query parameters.
                 "additional_query_parameters": params,
                 "max_retries": 2,
             },
@@ -47,6 +61,7 @@ def transcribe_file(
 
 
 def _describe(exc: Exception, api_key: str) -> str:
+    """Format an SDK/network error for display, with the API key masked."""
     status = getattr(exc, "status_code", None)
     body = getattr(exc, "body", None)
     msg = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__

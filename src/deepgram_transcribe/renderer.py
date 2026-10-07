@@ -17,8 +17,13 @@ Block = tuple[int | None, float, list[str]]
 def resolve_date(value: str, mtime: str | None = None, now: datetime | None = None) -> str:
     """Resolve a ``--date`` value to ``YYYY-MM-DD``.
 
-    ``mtime`` is the source mtime as an ISO-8601 string; ``now`` is injectable for tests.
-    Raises ValueError for anything invalid.
+    Args:
+        value: ``mtime``, ``now`` or a literal ``YYYY-MM-DD`` date.
+        mtime: Source mtime as an ISO-8601 string; required when ``value`` is ``mtime``.
+        now: Clock override for tests; defaults to the local current time.
+
+    Raises:
+        ValueError: If ``value`` is invalid, or ``mtime`` is missing or unparseable.
     """
     if value == "mtime":
         if not mtime:
@@ -38,6 +43,7 @@ def resolve_date(value: str, mtime: str | None = None, now: datetime | None = No
 
 
 def format_timestamp(seconds: float | None) -> str:
+    """Format seconds as ``HH:MM:SS``, truncating fractions; None counts as 0."""
     total = int(seconds or 0)
     return f"{total // 3600:02d}:{total % 3600 // 60:02d}:{total % 60:02d}"
 
@@ -46,6 +52,7 @@ def _yaml_str(value: str) -> str:
     """Quote a string for YAML unless it is a safe plain scalar."""
     if _PLAIN_RE.fullmatch(value) and value.lower() not in _RESERVED:
         return value
+    # Double-quoted YAML: escape backslash, quote and control characters so any string is safe.
     escapes = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r", "\t": "\\t"}
     out = []
     for ch in value:
@@ -59,13 +66,18 @@ def _yaml_str(value: str) -> str:
 
 
 def normalise(doc: dict, source_name: str | None = None) -> tuple[dict, dict]:
-    """Return ``(meta, response)`` from a wrapped doc or a bare Deepgram response."""
+    """Split a document into ``(meta, response)``.
+
+    Accepts a wrapped doc (``deepgram_transcribe`` + ``response``, as ``run`` saves it) or a
+    bare Deepgram response. For a bare one, ``source_name`` becomes the source in ``meta``.
+    """
     if isinstance(doc.get("response"), dict):
         return doc.get("deepgram_transcribe") or {}, doc["response"]
     return ({"source": {"name": source_name}} if source_name else {}), doc
 
 
 def _alternative(response: dict) -> tuple[dict, dict]:
+    """Return the first channel and its first alternative, or empty dicts."""
     channels = (response.get("results") or {}).get("channels") or []
     channel = channels[0] if channels else {}
     alts = channel.get("alternatives") or []
@@ -73,6 +85,7 @@ def _alternative(response: dict) -> tuple[dict, dict]:
 
 
 def _model(meta: dict, response: dict) -> str | None:
+    """Prefer the model requested in the saved options, else the one Deepgram reports."""
     model = (meta.get("options") or {}).get("model")
     if model:
         return str(model)
@@ -85,6 +98,7 @@ def _model(meta: dict, response: dict) -> str | None:
 
 
 def _paragraph_blocks(paragraphs: list[dict]) -> list[Block]:
+    """Turn paragraphs into blocks, merging consecutive ones from the same speaker."""
     blocks: list[Block] = []
     for p in paragraphs:
         sentences = p.get("sentences") or []
@@ -101,6 +115,7 @@ def _paragraph_blocks(paragraphs: list[dict]) -> list[Block]:
 
 
 def _word_blocks(words: list[dict]) -> list[Block]:
+    """Group words into one block per same-speaker run (fallback when no paragraphs)."""
     groups: list[tuple[int | None, float, list[str]]] = []
     for w in words:
         token = w.get("punctuated_word") or w.get("word") or ""
@@ -112,12 +127,14 @@ def _word_blocks(words: list[dict]) -> list[Block]:
 
 
 def _summary(response: dict) -> str | None:
+    """Return the summary text, ignoring Deepgram's bare "success" placeholder."""
     summary = (response.get("results") or {}).get("summary") or {}
     text = summary.get("short") or summary.get("result")
     return text.strip() if isinstance(text, str) and text.strip() not in ("", "success") else None
 
 
 def _topics(response: dict) -> list[str]:
+    """Return unique topic names across segments, in first-seen order."""
     segments = (((response.get("results") or {}).get("topics") or {}).get("results") or {}).get(
         "segments"
     ) or []
@@ -131,10 +148,16 @@ def _topics(response: dict) -> list[str]:
 
 
 def render_markdown(doc: dict, date: str, source_name: str | None = None) -> str:
-    """Render a wrapped JSON doc (or bare Deepgram response) as Markdown.
+    """Render a transcript as Markdown with YAML frontmatter.
 
-    ``date`` is the already-resolved frontmatter date (see ``resolve_date``).
-    ``source_name`` is the fallback source name for bare responses.
+    Args:
+        doc: A wrapped doc (``deepgram_transcribe`` + ``response``) or a bare Deepgram
+            response. Uses paragraphs if present, else words, else the plain transcript.
+        date: Already-resolved frontmatter date (see ``resolve_date``).
+        source_name: Source name for bare responses, which carry no metadata.
+
+    Returns:
+        The Markdown text, ending with a newline.
     """
     meta, response = normalise(doc, source_name)
     channel, alt = _alternative(response)
