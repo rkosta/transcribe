@@ -1,0 +1,171 @@
+{
+  "metadata": {
+    "request_id": "00000000-0000-0000-0000-000000000000",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "created": "2026-10-07T10:00:00.000Z",
+    "duration": 75.4,
+    "channels": 1,
+    "models": [
+      "abc123"
+    ],
+    "model_info": {
+      "abc123": {
+        "name": "nova-3",
+        "version": "2025-01-01.0",
+        "arch": "nova-3"
+      }
+    }
+  },
+  "results": {
+    "channels": [
+      {
+        "alternatives": [
+          {
+            "transcript": "Hello there. Welcome all. Thanks for having me. Sure.",
+            "confidence": 0.99,
+            "words": [
+              {
+                "word": "hello",
+                "start": 4.0,
+                "end": 4.4,
+                "confidence": 0.99,
+                "punctuated_word": "Hello",
+                "speaker": 0,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "there",
+                "start": 4.5,
+                "end": 4.9,
+                "confidence": 0.99,
+                "punctuated_word": "there.",
+                "speaker": 0,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "welcome",
+                "start": 5.0,
+                "end": 5.4,
+                "confidence": 0.99,
+                "punctuated_word": "Welcome",
+                "speaker": 0,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "all",
+                "start": 5.5,
+                "end": 5.9,
+                "confidence": 0.99,
+                "punctuated_word": "all.",
+                "speaker": 0,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "thanks",
+                "start": 31.0,
+                "end": 31.4,
+                "confidence": 0.99,
+                "punctuated_word": "Thanks",
+                "speaker": 1,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "for",
+                "start": 31.5,
+                "end": 31.7,
+                "confidence": 0.99,
+                "punctuated_word": "for",
+                "speaker": 1,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "having",
+                "start": 31.8,
+                "end": 32.0,
+                "confidence": 0.99,
+                "punctuated_word": "having",
+                "speaker": 1,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "me",
+                "start": 32.1,
+                "end": 32.4,
+                "confidence": 0.99,
+                "punctuated_word": "me.",
+                "speaker": 1,
+                "speaker_confidence": 0.9
+              },
+              {
+                "word": "sure",
+                "start": 40.0,
+                "end": 40.4,
+                "confidence": 0.99,
+                "punctuated_word": "Sure.",
+                "speaker": 0,
+                "speaker_confidence": 0.9
+              }
+            ],
+            "paragraphs": {
+              "transcript": "Hello there. Welcome all. Thanks for having me. Sure.",
+              "paragraphs": [
+                {
+                  "sentences": [
+                    {
+                      "text": "Hello there.",
+                      "start": 4.0,
+                      "end": 4.9
+                    }
+                  ],
+                  "num_words": 2,
+                  "start": 4.0,
+                  "end": 4.9,
+                  "speaker": 0
+                },
+                {
+                  "sentences": [
+                    {
+                      "text": "Welcome all.",
+                      "start": 5.0,
+                      "end": 5.9
+                    }
+                  ],
+                  "num_words": 2,
+                  "start": 5.0,
+                  "end": 5.9,
+                  "speaker": 0
+                },
+                {
+                  "sentences": [
+                    {
+                      "text": "Thanks for having me.",
+                      "start": 31.0,
+                      "end": 32.4
+                    }
+                  ],
+                  "num_words": 4,
+                  "start": 31.0,
+                  "end": 32.4,
+                  "speaker": 1
+                },
+                {
+                  "sentences": [
+                    {
+                      "text": "Sure.",
+                      "start": 40.0,
+                      "end": 40.4
+                    }
+                  ],
+                  "num_words": 1,
+                  "start": 40.0,
+                  "end": 40.4,
+                  "speaker": 0
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

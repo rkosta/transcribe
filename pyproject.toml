@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "deepgram-transcribe"
+dynamic = ["version"]
+description = "Transcribe recordings with Deepgram into Markdown + raw JSON."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ricardo Costa" }]
+keywords = ["deepgram", "transcription", "speech-to-text", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+    "deepgram-sdk>=7,<8",
+    "typer>=0.12",
+]
+
+[project.scripts]
+deepgram-transcribe = "deepgram_transcribe.cli:main"
+dgt = "deepgram_transcribe.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pyyaml>=6",
+    "ruff>=0.6",
+]
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/deepgram_transcribe/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/deepgram_transcribe"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not live'"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:.*InvalidStatusCode.*:DeprecationWarning",
+    "ignore:websockets.legacy is deprecated.*:DeprecationWarning",
+]
+markers = ["live: hits the real Deepgram API (needs DEEPGRAM_API_KEY, costs money)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["src/deepgram_transcribe/_version.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]

@@ -1,0 +1,14 @@
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+.claude/
+.worktrees/
+src/deepgram_transcribe/_version.py
