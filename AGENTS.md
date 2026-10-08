@@ -23,7 +23,7 @@ uv run dgt --help
 - Never log, print, or persist the API key (including in saved JSON).
 - No email address anywhere in package metadata; author is `Ricardo Costa`.
 - Tests never hit the network unless marked `live`.
-- Branch per card (`feat/...`); no pushes, merges or tags — Ricardo does those after review.
+- Branch per card from fresh `origin/main`. Claude Code writes and commits only; code-dev pushes the card branch and opens a PR against `main` (protected: PR + green CI required). No merges or tags: Ricardo merges on GitHub and tags releases.
 - Keep docs in sync: behaviour changes update `docs/spec.md` in the same change.
 
 ## Comments and docstrings
